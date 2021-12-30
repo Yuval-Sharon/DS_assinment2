@@ -1,3 +1,4 @@
+import matplotlib
 import numpy as np
 
 import MnistDataLoader
@@ -46,13 +47,14 @@ def compute_covariance_eigendecomposition(x_train):
 def kmeans(k, x_imgs,centers = np.random.random((10,784))-0.5):
     num_itr = 0
     x_imgs = x_imgs.transpose()
-    changed = False
+    changed = True
     clusters = np.empty([10], dtype=object)
-    for j in range(10):
-        clusters[j] = list()
     indicators = np.zeros(len(x_imgs)) -1
-    while not changed:
+    while num_itr < 30:
+        for j in range(10):
+            clusters[j] = list()
         num_itr += 1
+        print(num_itr)
         changed = False
         #divide to clusters
         for index in range(len(x_imgs)):
@@ -68,15 +70,22 @@ def kmeans(k, x_imgs,centers = np.random.random((10,784))-0.5):
             if closest_center != indicators[index]:
                 changed = True
                 indicators[index] = closest_center
-
-        if not changed:
-            for i in range(len(centers)):
-                centers[i] = np.mean(clusters[i])
-    print(f'knum_itr)
+        for i in range(len(centers)):
+            center = np.zeros(784)
+            for img1 in clusters[i]:
+                center += img1
+            center = center/len(clusters[i])
+            centers[i] = center
+            # centers[i] = np.mean(np.array(clusters[i]),)
+            # print(f'center[{i}] = {centers[i]}')
+            # print(f'clusters[{i}] = {np.array(clusters[i])}')
+            
+    print(f'kmeans iters = {num_itr}')
     return centers,indicators,clusters
 
 
 if __name__ == '__main__':
+    # matplotlib.use('Qt5Agg')
     loader = MnistDataLoader.MnistDataloader('train-images.idx3-ubyte', 'train-labels.idx1-ubyte'
                                              , 't10k-images.idx3-ubyte', 't10k-labels.idx1-ubyte')
     (x_train, y_train), (x_test, y_test) = loader.load_data()
@@ -97,7 +106,7 @@ if __name__ == '__main__':
     #end of section 2 (b)
     # numpy.apply_along_axis(decrease_dimension(x,p,eigans_vectors_matrix),1,x_train.transpose())
     clusters = kmeans(10,x_train_new)[2]
-    for i in range(50):
+    for i in range(20):
         img = clusters[3][i].reshape((28,28))
         plt.imshow(img,cmap='gray')
         plt.show()
