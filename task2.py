@@ -46,12 +46,12 @@ def compute_covariance_eigendecomposition(x_train):
 def kmeans(k, x_imgs,centers = np.random.random((10,784))-0.5):
     num_itr = 0
     x_imgs = x_imgs.transpose()
-    changed = True
+    changed = False
     clusters = np.empty([10], dtype=object)
     for j in range(10):
         clusters[j] = list()
     indicators = np.zeros(len(x_imgs)) -1
-    while changed:
+    while not changed:
         num_itr += 1
         changed = False
         #divide to clusters
@@ -69,10 +69,10 @@ def kmeans(k, x_imgs,centers = np.random.random((10,784))-0.5):
                 changed = True
                 indicators[index] = closest_center
 
-        for i in range(len(centers)):
-            centers[i] = np.mean(clusters[i])
-            
-    print(f'kmeans iters = {num_itr}')
+        if not changed:
+            for i in range(len(centers)):
+                centers[i] = np.mean(clusters[i])
+    print(f'knum_itr)
     return centers,indicators,clusters
 
 
