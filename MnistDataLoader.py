@@ -1,6 +1,7 @@
 #
 # This is a sample Notebook to demonstrate how to read "MNIST Dataset"
 #
+#from keras.datasets import mnist
 import numpy
 import numpy as np  # linear algebra
 import struct
@@ -51,8 +52,11 @@ class MnistDataloader(object):
         f = lambda a : a.flatten()
         x_train, y_train = self.read_images_labels(self.training_images_filepath, self.training_labels_filepath)
         x_test, y_test = self.read_images_labels(self.test_images_filepath, self.test_labels_filepath)
+
         x_train = (((numpy.array(x_train))/255) - 0.5)
-        x_test= (((numpy.array(x_train))/255) - 0.5)
+        x_test = (((numpy.array(x_test))/255) - 0.5)
+
+
         # x_train = numpy.apply_along_axis(f,1,x_train)
         x_train = np.array([a.flatten() for a in x_train]).transpose()
         x_test = np.array([a.flatten() for a in x_test]).transpose()
