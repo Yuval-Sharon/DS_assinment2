@@ -17,7 +17,7 @@ def decrease_dimension(x, p, u):
     #     new_img += u.transpose()[i].real * w[i].real
     #
     # return new_img
-    return w
+    return w[:p]
 
 def show_back_as_image(x,u,p,digit):
     new_img = numpy.zeros(784)
@@ -31,7 +31,7 @@ def show_back_as_image(x,u,p,digit):
 
 def find_closest_center_index(centers,img):
     closest_idx = 0
-    dist = numpy.linalg.norm(img - centers[0])
+    dist = ((img - centers[0])**2).sum()
     for i in range(0,10):
         curr_dist = ((img - centers[i])**2).sum()
         if dist > curr_dist:
@@ -73,9 +73,9 @@ def kmeans(k, x_imgs,centers = np.random.random((10,784))-0.5):
         for index in range(len(x_imgs)):
             img = x_imgs[index]
             closest_center = 0
-            closest_dist = la.norm(img - centers[0])
+            closest_dist = ((img - centers[0])**2).sum()
             for i in range(1,10):
-                dist = la.norm(img - centers[i])
+                dist = ((img - centers[i])**2).sum()
                 if dist < closest_dist:
                     closest_center = i
                     closest_dist = dist
@@ -98,24 +98,25 @@ def kmeans(k, x_imgs,centers = np.random.random((10,784))-0.5):
     return centers,indicators,clusters
 
 
-def kmeansAfterPca(k, x_imgs, centers=np.random.random((10, 20)) - 0.5):
-    num_itr = 0
-    # x_imgs = x_imgs.transpose()
+def kmeansAfterPca(k, x_imgs, rank, centers=None):
+    if (centers == None):
+        centers = np.random.random((k, rank)) - 0.5
+    # num_itr = 0
     changed = True
-    clusters = np.empty([10], dtype=object)
+    clusters = np.empty([k], dtype=object)
     indicators = np.zeros(len(x_imgs)) - 1
-    while num_itr < 40:
-        for j in range(10):
+    while changed:
+        for j in range(k):
             clusters[j] = list()
-        num_itr += 1
-        print(num_itr)
+        # num_itr += 1
+        # print(num_itr)
         changed = False
         # divide to clusters
         for index in range(len(x_imgs)):
             img = x_imgs[index]
             closest_center = 0
             closest_dist = ((img - centers[0])**2).sum()
-            for i in range(1, 10):
+            for i in range(1, k):
                 dist = ((img - centers[i])**2).sum()
                 if dist < closest_dist:
                     closest_center = i
@@ -124,17 +125,16 @@ def kmeansAfterPca(k, x_imgs, centers=np.random.random((10, 20)) - 0.5):
             if closest_center != indicators[index]:
                 changed = True
                 indicators[index] = closest_center
+        # update the centers
         for i in range(len(centers)):
-            center = np.zeros(20)
+            center = np.zeros(rank)
             if len(clusters[i]) > 0:
                 for img1 in clusters[i]:
                     center += img1
                 center = center / len(clusters[i])
                 centers[i] = center
             else:
-                centers[i] = np.random.random(20) - 0.5
-
-    print(f'kmeans iters = {num_itr}')
+                centers[i] = np.random.random(rank) - 0.5
     return centers, indicators, clusters
 
 
@@ -161,6 +161,22 @@ def show_back_as_image_before_pca(img,digit):
     plt.imshow(img.reshape(28, 28), cmap='gray')
     plt.title(f'center represent digit -{digit}')
     plt.show()
+
+
+def get_centers(p,k,labels,x_train_in_rank_p):
+    smart_centers = np.zeros((k,p))
+    found = 0
+    digit_found = numpy.zeros(k)
+    for j in range(len(labels)):
+        if digit_found[labels[j]] == 0:
+            digit_found[labels[j]] = 1
+            found +=1
+            smart_centers[labels[j]] =x_train_in_rank_p[j]
+        if found == 9:
+            return smart_centers
+
+
+
 
 
 if __name__ == '__main__':
@@ -191,23 +207,50 @@ if __name__ == '__main__':
     #     img = clusters[3][i].reshape((28,28))
     #     plt.imshow(img,cmap='gray')
     #     plt.show()
-    centers, indicators, clusters = kmeansAfterPca(10,x_train_new)
+    centers, indicators, clusters = kmeansAfterPca(10,x_train_new,20)
     # centers, indicators, clusters = kmeans(10,x_train.transpose())
     cluster_to_digit = clusterToDigit(indicators,y_train)
     successes = 0
-    for k in range(10):
-        show_back_as_image(centers[k],eigans_vectors_matrix,20,cluster_to_digit[k])
-        # show_back_as_image_before_pca(centers[k],cluster_to_digit[k])
+    # for k in range(10):
+    #     show_back_as_image(centers[k],eigans_vectors_matrix,20,cluster_to_digit[k])
+    #     # show_back_as_image_before_pca(centers[k],cluster_to_digit[k])
+    # # x_test_new = x_test
     x_test_new = numpy.array([decrease_dimension(x, 20, eigans_vectors_matrix) for x in x_test.transpose()])
     print(len(y_test))
     for i in range(len(y_test)):
         center_idx = find_closest_center_index(centers,x_test_new[i])
         if cluster_to_digit[center_idx] == y_test[i]:
             successes += 1
-    print(f'sucess {successes}')
-    print(f'percentage of sucess: {(successes/len(y_train))*100}%')
+    # print(f'sucess {successes}')
+    print(f'percentage of sucess: {(successes/len(y_test))*100}%')
 
 
+    #repeating the experiment using p = 12
+    x_train_new = numpy.array([decrease_dimension(x, 12, eigans_vectors_matrix) for x in x_train.transpose()])
+    x_test_new = numpy.array([decrease_dimension(x, 12, eigans_vectors_matrix) for x in x_test.transpose()])
+    centers, indicators, clusters = kmeansAfterPca(10, x_train_new, 12)
+    cluster_to_digit = clusterToDigit(indicators,y_train)
+    successes = 0
+    for i in range(len(y_test)):
+        center_idx = find_closest_center_index(centers,x_test_new[i])
+        if cluster_to_digit[center_idx] == y_test[i]:
+            successes += 1
+    print(f'p=12 percentage of sucess: {(successes / len(y_test)) * 100}%')
+
+
+    #Kmeans after initializing each of the Kmeans centroids using
+    # the mean of 10 reduced images  from each label.
+    x_train_new = numpy.array([decrease_dimension(x, 20, eigans_vectors_matrix) for x in x_train.transpose()])
+    x_test_new = numpy.array([decrease_dimension(x, 12, eigans_vectors_matrix) for x in x_test.transpose()])
+    smart_centers = get_centers(20,10,y_train,x_train_new)
+    centers, indicators, clusters = kmeansAfterPca(10, x_train_new, 20,smart_centers)
+    cluster_to_digit = clusterToDigit(indicators,y_train)
+    successes = 0
+    for i in range(len(y_test)):
+        center_idx = find_closest_center_index(centers,x_test_new[i])
+        if cluster_to_digit[center_idx] == y_test[i]:
+            successes += 1
+    print(f' percentage of sucess after smart center initialization: {(successes / len(y_test)) * 100}%')
 
 
 
